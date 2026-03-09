@@ -1,4 +1,7 @@
-use std::io::{self, Write};
+use std::{
+    env,
+    io::{self, Write},
+};
 mod executor;
 use executor::execute_command;
 
@@ -9,7 +12,15 @@ fn main() {
         eprintln!("Error setting Ctrl-C handler: {}", e);
     }
     loop {
-        print!("rsh> ");
+        let current_dir = env::current_dir().unwrap_or_default();
+        let mut prompt_path = current_dir.display().to_string();
+
+        if let Ok(home) = env::var("HOME") {
+            if prompt_path.starts_with(&home) {
+                prompt_path = prompt_path.replacen(&home, "~", 1);
+            }
+        }
+        print!("{} ❯ ", prompt_path);
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
