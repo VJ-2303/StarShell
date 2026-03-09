@@ -3,6 +3,11 @@ mod executor;
 use executor::execute_command;
 
 fn main() {
+    if let Err(e) = ctrlc::set_handler(|| {
+        println!();
+    }) {
+        eprintln!("Error setting Ctrl-C handler: {}", e);
+    }
     loop {
         print!("rsh> ");
         io::stdout().flush().unwrap();

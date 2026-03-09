@@ -16,7 +16,34 @@ pub fn execute_command(args: &[&str]) -> Result<(), io::Error> {
             std::process::exit(0);
         }
         _ => {
-            if let Some(pos) = args.iter().position(|&s| s == ">") {
+            if let Some(pos) = args.iter().position(|&s| s == "|") {
+                if pos == 0 || pos + 1 >= args.len() {
+                    eprintln!("syntax error near token |");
+                    return Ok(());
+                }
+                let left_args = &args[..pos];
+                let right_args = &args[pos + 1..];
+
+                let mut left_child = Command::new(left_args[0])
+                    .args(&left_args[1..])
+                    .stdout(Stdio::piped())
+                    .spawn()?;
+
+                let left_stdout = left_child.stdout.take().ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        "Coult not capture stdout of left child",
+                    )
+                })?;
+
+                let mut right_child = Command::new(right_args[0])
+                    .args(&right_args[1..])
+                    .stdin(Stdio::from(left_stdout))
+                    .spawn()?;
+
+                left_child.wait()?;
+                right_child.wait()?;
+            } else if let Some(pos) = args.iter().position(|&s| s == ">") {
                 if pos + 1 >= args.len() {
                     eprintln!("syntax error: unexpected token at the end");
                     return Ok(());
