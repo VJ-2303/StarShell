@@ -2,6 +2,7 @@ use std::{
     env,
     io::{self, Write},
 };
+mod error;
 mod executor;
 use executor::execute_command;
 
@@ -33,7 +34,7 @@ fn main() {
         }
 
         if let Err(e) = execute_command(&args) {
-            eprintln!("Error executing command: {}", e);
+            eprintln!("rsh: {}", e);
         }
     }
 }
