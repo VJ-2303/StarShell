@@ -1,68 +1,47 @@
 use crate::error::ShellError;
+use crate::parser::{ParsedCommand, parse_command};
 use std::env;
 use std::fs::File;
 use std::io;
 use std::process::{Command, Stdio};
 
 pub fn execute_command(args: &[&str]) -> Result<(), ShellError> {
-    match args[0] {
-        "cd" => {
-            if args.len() > 1 {
-                env::set_current_dir(args[1])?;
-            } else {
-                return Err(ShellError::Builtin("cd requires an argument.".to_string()));
-            }
+    let parsed_cmd = parse_command(args)?;
+
+    match parsed_cmd {
+        ParsedCommand::Cd { path } => {
+            env::set_current_dir(path)?;
         }
-        "exit" => {
+        ParsedCommand::Exit => {
             std::process::exit(0);
         }
-        _ => {
-            if let Some(pos) = args.iter().position(|&s| s == "|") {
-                if pos == 0 || pos + 1 >= args.len() {
-                    return Err(ShellError::Syntax("unexpected token `|`".to_string()));
-                }
-                let left_args = &args[..pos];
-                let right_args = &args[pos + 1..];
-
-                let mut left_child = Command::new(left_args[0])
-                    .args(&left_args[1..])
-                    .stdout(Stdio::piped())
-                    .spawn()?;
-
-                let left_stdout = left_child.stdout.take().ok_or_else(|| {
-                    io::Error::new(
-                        io::ErrorKind::Other,
-                        "Coult not capture stdout of left child",
-                    )
-                })?;
-
-                let mut right_child = Command::new(right_args[0])
-                    .args(&right_args[1..])
-                    .stdin(Stdio::from(left_stdout))
-                    .spawn()?;
-
-                left_child.wait()?;
-                right_child.wait()?;
-            } else if let Some(pos) = args.iter().position(|&s| s == ">") {
-                if pos + 1 >= args.len() {
-                    return Err(ShellError::Syntax(
-                        "missing filename for redirection.".to_string(),
-                    ));
-                }
-                let filename = args[pos + 1];
-                let command_args = &args[..pos];
-
-                let file = File::create(filename)?;
-
-                let mut child = Command::new(args[0])
-                    .args(&command_args[1..])
-                    .stdout(Stdio::from(file))
-                    .spawn()?;
-                child.wait()?;
-            } else {
-                let mut child = Command::new(args[0]).args(&args[1..]).spawn()?;
-                child.wait()?;
-            }
+        ParsedCommand::Normal { args } => {
+            let mut child = Command::new(args[0]).args(&args[1..]).spawn()?;
+            child.wait()?;
+        }
+        ParsedCommand::Redirect { args, filename } => {
+            let file = File::create(filename)?;
+            let mut child = Command::new(args[0])
+                .args(&args[1..])
+                .stdout(Stdio::from(file))
+                .spawn()?;
+            child.wait()?;
+        }
+        ParsedCommand::Pipe { left, right } => {
+            let mut left_child = Command::new(left[0])
+                .args(&left[1..])
+                .stdout(Stdio::piped())
+                .spawn()?;
+            let left_stdout = left_child
+                .stdout
+                .take()
+                .ok_or_else(|| io::Error::new(io::ErrorKind::Other, "Could not capture stdout"))?;
+            let mut right_child = Command::new(right[0])
+                .args(&right[1..])
+                .stdin(Stdio::from(left_stdout))
+                .spawn()?;
+            left_child.wait()?;
+            right_child.wait()?;
         }
     }
     Ok(())

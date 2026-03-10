@@ -4,6 +4,7 @@ use std::{
 };
 mod error;
 mod executor;
+mod parser;
 use executor::execute_command;
 
 fn main() {
