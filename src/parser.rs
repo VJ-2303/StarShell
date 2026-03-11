@@ -21,7 +21,7 @@ pub enum ParsedCommand<'a> {
 
 pub fn parse_command<'a>(args: &'a [&'a str]) -> Result<ParsedCommand<'a>, ShellError> {
     if let Some(pos) = args.iter().position(|&s| s == "|") {
-        if pos == 0 || pos + 1 > args.len() {
+        if pos == 0 || pos + 1 >= args.len() {
             return Err(ShellError::Syntax("unexpected token `|`".to_string()));
         }
         return Ok(ParsedCommand::Pipe {
@@ -30,7 +30,7 @@ pub fn parse_command<'a>(args: &'a [&'a str]) -> Result<ParsedCommand<'a>, Shell
         });
     }
     if let Some(pos) = args.iter().position(|&s| s == ">") {
-        if pos == 0 || pos + 1 > args.len() {
+        if pos == 0 || pos + 1 >= args.len() {
             return Err(ShellError::Syntax(
                 "missing filename for redirection".to_string(),
             ));

@@ -45,12 +45,10 @@ fn run_editor_loop(history: &[String], prompt: &str) -> Result<String, ShellErro
                             if history_index > 0 {
                                 history_index -= 1;
                                 buffer = history[history_index].clone();
-                                print!("\r\x1b[2k{}{}", prompt, buffer);
+                                print!("\r\x1b[2K{}{}", prompt, buffer);
                                 io::stdout().flush()?;
                             }
-                        }
-
-                        if direction == 66 {
+                        } else if direction == 66 {
                             if history_index < history.len() {
                                 history_index += 1;
                                 if history_index == history.len() {
@@ -58,7 +56,7 @@ fn run_editor_loop(history: &[String], prompt: &str) -> Result<String, ShellErro
                                 } else {
                                     buffer = history[history_index].clone();
                                 }
-                                print!("\r\x1b[2k{}{}", prompt, buffer);
+                                print!("\r\x1b[2K{}{}", prompt, buffer);
                                 io::stdout().flush()?;
                             }
                         }
